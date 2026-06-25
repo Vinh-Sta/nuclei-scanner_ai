@@ -1,2 +1,4 @@
 flask
 gunicorn
+langchain-ollama
+langchain-core

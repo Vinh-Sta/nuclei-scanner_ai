@@ -36,6 +36,7 @@
                 <th>Missing Header</th>
                 <th>URL</th>
                 <th>Description</th>
+                <th>AI Report (Executive Summary)</th>
             </tr>
 
             {% for f in findings %}
@@ -45,6 +46,7 @@
                 <td>{{ f.get("matcher-name", "") }}</td>
                 <td>{{ f.get("matched-at", "") }}</td>
                 <td>{{ f.get("info", {}).get("description", "") }}</td>
+                <td style="white-space: pre-wrap;">{{ f.ai_report }}</td>
             </tr>
             {% endfor %}
         </table>

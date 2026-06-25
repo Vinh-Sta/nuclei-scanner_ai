@@ -1,7 +1,37 @@
 from flask import Flask, request, render_template
 import subprocess, os, time, json
 
+from langchain_ollama import ChatOllama
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+import concurrent.futures
+
+
 app = Flask(__name__)
+
+def generate_ai_report(vuln_name, description):
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", """You are an expert in cybersecurity. Write a brief Executive Report for this vulnerability.
+        Format strictly like this:
+        Business Impact: [1 sentence impact]
+        Recommendation: [1 sentence how to fix]
+        DO NOT use any markdown formatting, asterisks (**), or bold text."""),
+        ("human", "Vulnerability: {name}\nDetails: {desc}")
+    ])
+
+    llm = ChatOllama(
+        base_url="https://childish-squire-observer.ngrok-free.dev",
+        model="llama3.2:1b",
+        temperature=0
+    )
+
+    chain = prompt | llm | StrOutputParser()
+    
+    try:
+        result = chain.invoke({"name": vuln_name, "desc": description})
+        return result.replace("**", "")
+    except Exception as e:
+        return "AI Error: Make sure Ngrok and Ollama are running locally."
 
 @app.route("/")
 def home():
@@ -48,6 +78,16 @@ def scan():
             severity_counts[sev] += 1
         else:
             severity_counts["unknown"] += 1
+
+    def process_ai_for_item(item):
+        name = item.get("info", {}).get("name", "Unknown")
+        desc = item.get("info", {}).get("description", "")
+        item["ai_report"] = generate_ai_report(name, desc)
+        return item
+    
+    if findings:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            findings = list(executor.map(process_ai_for_item, findings))
 
     return render_template(
         "index.html",
