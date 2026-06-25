@@ -1,5 +1,6 @@
 from flask import Flask, request, render_template
 import subprocess, os, time, json
+import urllib.request
 
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
@@ -32,6 +33,15 @@ def generate_ai_report(vuln_name, description):
         return result.replace("**", "")
     except Exception as e:
         return "AI Error: Make sure Ngrok and Ollama are running locally."
+
+AI_BASE_URL = "https://childish-squire-observer.ngrok-free.dev"
+
+def is_ai_online():
+    try:
+        urllib.request.urlopen(AI_BASE_URL, timeout=3)
+        return True
+    except:
+        return False
 
 @app.route("/")
 def home():
@@ -78,14 +88,19 @@ def scan():
             severity_counts[sev] += 1
         else:
             severity_counts["unknown"] += 1
-
-    def process_ai_for_item(item):
-        name = item.get("info", {}).get("name", "Unknown")
-        desc = item.get("info", {}).get("description", "")
-        item["ai_report"] = generate_ai_report(name, desc)
-        return item
     
     if findings:
+        ai_status = is_ai_online()
+
+        def process_ai_for_item(item):
+            name = item.get("info", {}).get("name", "Unknown")
+            desc = item.get("info", {}).get("description", "")
+            if ai_status:
+                item["ai_report"] = generate_ai_report(name, desc)
+            else:
+                item["ai_report"] = "AI is currently offline (Local host is down). No report generated."
+            return item
+
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             findings = list(executor.map(process_ai_for_item, findings))
 
