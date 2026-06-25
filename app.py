@@ -23,7 +23,7 @@ def generate_ai_report(vuln_name, description):
     llm = ChatOllama(
         base_url="https://childish-squire-observer.ngrok-free.dev",
         model="llama3.2:1b",
-        temperature=0
+        temperature=0.4
     )
 
     chain = prompt | llm | StrOutputParser()
@@ -95,8 +95,12 @@ def scan():
         def process_ai_for_item(item):
             name = item.get("info", {}).get("name", "Unknown")
             desc = item.get("info", {}).get("description", "")
+
+            missing_header = item.get("matcher-name", "")
+            full_desc = f"{desc} Specifically, the header '{missing_header}' is missing."
+
             if ai_status:
-                item["ai_report"] = generate_ai_report(name, desc)
+                item["ai_report"] = generate_ai_report(name, full_desc)
             else:
                 item["ai_report"] = "AI is currently offline (Local host is down). No report generated."
             return item
