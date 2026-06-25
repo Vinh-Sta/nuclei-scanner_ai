@@ -40,12 +40,21 @@ def scan():
             for line in f:
                 if line.strip():
                     findings.append(json.loads(line))
+    
+    severity_counts = {"info": 0, "low": 0, "medium": 0, "high": 0, "critical": 0, "unknown": 0}
+    for f in findings:
+        sev = f.get("info", {}).get("severity", "unknown").lower()
+        if sev in severity_counts:
+            severity_counts[sev] += 1
+        else:
+            severity_counts["unknown"] += 1
 
     return render_template(
         "index.html",
         target=target,
         findings=findings,
-        stderr=r.stderr
+        stderr=r.stderr,
+        chart_data=severity_counts
     )
 
 if __name__ == "__main__":
