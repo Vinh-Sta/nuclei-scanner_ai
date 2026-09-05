@@ -2,6 +2,13 @@
 <html>
 <head>
     <title>Nuclei Security Scanner</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .chart-container {
+            width: 400px;
+            margin: 20px 0;
+        }
+    </style>
 </head>
 <body>
 
@@ -18,6 +25,10 @@
     <h2>Results for {{ target }}</h2>
 
     {% if findings %}
+        <div class="chart-container">
+            <canvas id="severityChart"></canvas>
+        </div>
+
         <table border="1" cellpadding="6">
             <tr>
                 <th>Severity</th>
@@ -25,6 +36,7 @@
                 <th>Missing Header</th>
                 <th>URL</th>
                 <th>Description</th>
+                <th>AI Report (Executive Summary)</th>
             </tr>
 
             {% for f in findings %}
@@ -34,9 +46,53 @@
                 <td>{{ f.get("matcher-name", "") }}</td>
                 <td>{{ f.get("matched-at", "") }}</td>
                 <td>{{ f.get("info", {}).get("description", "") }}</td>
+                <td style="white-space: pre-wrap;">{{ f.ai_report }}</td>
             </tr>
             {% endfor %}
         </table>
+        <script>
+            const ctx = document.getElementById('severityChart').getContext('2d');
+            const chartData = {{ chart_data | tojson }};
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Info', 'Low', 'Medium', 'High', 'Critical', 'Unknown'],
+                    datasets: [{
+                        label: 'Vulnerabilities',
+                        data: [
+                            chartData.info,
+                            chartData.low,
+                            chartData.medium,
+                            chartData.high,
+                            chartData.critical,
+                            chartData.unknown
+                        ],
+                        backgroundColor: [
+                            '#36A2EB', 
+                            '#FFCE56', 
+                            '#FF9F40',
+                            '#FF6384', 
+                            '#9966FF', 
+                            '#C9CBCF'  
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Severity Distribution'
+                        }
+                    }
+                }
+            });
+        </script>
     {% else %}
         <p>No missing security headers found.</p>
     {% endif %}
